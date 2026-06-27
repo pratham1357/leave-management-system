@@ -7,10 +7,10 @@ def validate_leave_request(request):
     """
 
     required_fields = [
-        "employeeId",
-        "leaveType",
-        "startDate",
-        "endDate",
+        "employee_id",
+        "leave_type",
+        "start_date",
+        "end_date",
         "reason"
     ]
 
@@ -18,7 +18,7 @@ def validate_leave_request(request):
         if field not in request or not request[field]:
             raise ValueError(f"Missing required field: {field}")
 
-    validate_dates(request["startDate"], request["endDate"])
+    validate_dates(request["start_date"], request["end_date"])
 
 
 def validate_dates(start_date, end_date):
