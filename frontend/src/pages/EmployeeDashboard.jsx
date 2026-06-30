@@ -17,57 +17,52 @@ function EmployeeDashboard() {
   const [requests, setRequests] = useState([]);
 
   const employeeId = "EMP001";
+  const loadData = async () => {
+  try {
+    const balanceData =
+      await getLeaveBalance(employeeId);
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const balanceData =
-          await getLeaveBalance(employeeId);
+    const historyData =
+      await getLeaveHistory(employeeId);
 
-        const historyData =
-          await getLeaveHistory(employeeId);
+    const mappedBalances = {
+      casual: 0,
+      sick: 0,
+      earned: 0,
+    };
 
-        const mappedBalances = {
-          casual: 0,
-          sick: 0,
-          earned: 0,
-        };
+    balanceData.forEach((b) => {
+      if (b.balance_key === "CASUAL")
+        mappedBalances.casual =
+          b.remaining_days;
 
-        balanceData.forEach((b) => {
-          if (b.balance_key === "CASUAL") {
-            mappedBalances.casual =
-              b.remaining_days;
-          }
+      if (b.balance_key === "SICK")
+        mappedBalances.sick =
+          b.remaining_days;
 
-          if (b.balance_key === "SICK") {
-            mappedBalances.sick =
-              b.remaining_days;
-          }
+      if (b.balance_key === "EARNED")
+        mappedBalances.earned =
+          b.remaining_days;
+    });
 
-          if (b.balance_key === "EARNED") {
-            mappedBalances.earned =
-              b.remaining_days;
-          }
-        });
+    setBalances(mappedBalances);
 
-        setBalances(mappedBalances);
-
-        const formattedRequests =
-          historyData.map((r) => ({
-            requestId: r.request_id,
-            leaveType: r.leave_type,
-            status: r.status,
-            startDate: r.start_date,
-            endDate: r.end_date,
-            reason: r.reason,
-          }));
+    const formattedRequests =
+      historyData.map((r) => ({
+        requestId: r.request_id,
+        leaveType: r.leave_type,
+        status: r.status,
+        startDate: r.start_date,
+        endDate: r.end_date,
+        reason: r.reason,
+      }));
 
         setRequests(formattedRequests);
       } catch (err) {
         console.error(err);
       }
     };
-
+  useEffect(() => {
     loadData();
   }, []);
 
@@ -98,7 +93,7 @@ function EmployeeDashboard() {
         />
       </div>
 
-      <LeaveForm />
+      <LeaveForm employeeId={employeeId} onSuccess={loadData} />
 
       <br />
 

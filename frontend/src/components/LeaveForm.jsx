@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { submitLeave } from "../api/leaveApi";
 
-function LeaveForm() {
+function LeaveForm({
+  employeeId,
+  onSuccess,
+}) {
   const [formData, setFormData] = useState({
     employeeId: "",
     leaveType: "CASUAL",
@@ -22,7 +25,10 @@ function LeaveForm() {
 
     try {
       await submitLeave(formData);
-
+      if (onSuccess) {
+        await onSuccess();
+      }
+      
       alert("Leave submitted successfully!");
 
       setFormData({
