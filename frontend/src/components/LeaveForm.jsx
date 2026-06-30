@@ -1,26 +1,103 @@
+import { useState } from "react";
+import { submitLeave } from "../api/leaveApi";
+
 function LeaveForm() {
+  const [formData, setFormData] = useState({
+    employeeId: "",
+    leaveType: "CASUAL",
+    startDate: "",
+    endDate: "",
+    reason: "",
+  });
+
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    try {
+      await submitLeave(formData);
+
+      alert("Leave submitted successfully!");
+
+      setFormData({
+        employeeId: "",
+        leaveType: "CASUAL",
+        startDate: "",
+        endDate: "",
+        reason: "",
+      });
+    } catch (err) {
+      console.error(err);
+
+      alert(
+        err.response?.data?.message ||
+          "Failed to submit leave."
+      );
+    }
+  };
+
   return (
-    <form>
+    <form onSubmit={handleSubmit}>
       <h2>Apply Leave</h2>
 
-      <input placeholder="Employee ID" />
-      <br /><br />
+      <input
+        name="employeeId"
+        placeholder="Employee ID"
+        value={formData.employeeId}
+        onChange={handleChange}
+      />
 
-      <select>
-        <option>CASUAL</option>
-        <option>SICK</option>
-        <option>EARNED</option>
+      <br />
+      <br />
+
+      <select
+        name="leaveType"
+        value={formData.leaveType}
+        onChange={handleChange}
+      >
+        <option value="CASUAL">CASUAL</option>
+        <option value="SICK">SICK</option>
+        <option value="EARNED">EARNED</option>
       </select>
 
-      <br /><br />
+      <br />
+      <br />
 
-      <input type="date" />
+      <input
+        type="date"
+        name="startDate"
+        value={formData.startDate}
+        onChange={handleChange}
+      />
 
-      <br /><br />
+      <br />
+      <br />
 
-      <input type="date" />
+      <input
+        type="date"
+        name="endDate"
+        value={formData.endDate}
+        onChange={handleChange}
+      />
 
-      <br /><br />
+      <br />
+      <br />
+
+      <textarea
+        name="reason"
+        placeholder="Reason"
+        value={formData.reason}
+        onChange={handleChange}
+      />
+
+      <br />
+      <br />
 
       <button type="submit">
         Submit

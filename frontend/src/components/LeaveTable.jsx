@@ -1,6 +1,6 @@
 function LeaveTable({ requests }) {
   return (
-    <table border="1">
+    <table width="100%" border="1">
       <thead>
         <tr>
           <th>ID</th>
@@ -10,13 +10,21 @@ function LeaveTable({ requests }) {
       </thead>
 
       <tbody>
-        {requests.map((request) => (
-          <tr key={request.requestId}>
-            <td>{request.requestId}</td>
-            <td>{request.leaveType}</td>
-            <td>{request.status}</td>
+        {requests.length === 0 ? (
+          <tr>
+            <td colSpan="3">
+              No leave requests found.
+            </td>
           </tr>
-        ))}
+        ) : (
+          requests.map((request) => (
+            <tr key={request.requestId}>
+              <td>{request.requestId}</td>
+              <td>{request.leaveType}</td>
+              <td>{request.status}</td>
+            </tr>
+          ))
+        )}
       </tbody>
     </table>
   );
