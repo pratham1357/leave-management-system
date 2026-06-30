@@ -1,6 +1,9 @@
 import { approveRequest } from "../api/managerApi";
 
-function PendingTable({ requests }) {
+function PendingTable({
+  requests,
+  setRequests,
+}) {
   const handleAction = async (
     employeeId,
     requestId,
@@ -13,12 +16,15 @@ function PendingTable({ requests }) {
         action
       );
 
+      setRequests((prev) =>
+        prev.filter(
+          (r) => r.requestId !== requestId
+        )
+      );
+
       alert(
         `Request ${action.toLowerCase()}d successfully!`
       );
-
-      // Temporary solution for now
-      window.location.reload();
     } catch (err) {
       console.error(err);
 

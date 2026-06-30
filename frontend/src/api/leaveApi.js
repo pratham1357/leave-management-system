@@ -9,10 +9,22 @@ export const submitLeave = async (payload) => {
   return response.data;
 };
 
-export const getLeaveHistory = async (employeeId) => {
+export const getLeaveHistory = async (
+  employeeId
+) => {
   const response = await client.get(
-    `/leave/employee/${employeeId}`
+    `/leave/requests/${employeeId}`
   );
 
-  return response.data;
+  return response.data.requests;
+};
+
+export const getLeaveBalance = async (
+  employeeId
+) => {
+  const response = await client.get(
+    `/leave/balance/${employeeId}`
+  );
+
+  return response.data.balances;
 };

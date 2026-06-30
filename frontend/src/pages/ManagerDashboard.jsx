@@ -31,7 +31,10 @@ function ManagerDashboard() {
   return (
     <div>
       <h1>Manager Dashboard</h1>
-      <PendingTable requests={requests} />
+      <PendingTable
+        requests={requests}
+        setRequests={setRequests}
+      />
     </div>
   );
 }
