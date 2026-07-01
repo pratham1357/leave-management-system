@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import PendingTable from "../components/PendingTable";
 import { getPendingRequests } from "../api/managerApi";
+import Navbar from "../components/Navbar";
 
 function ManagerDashboard() {
   const [requests, setRequests] = useState([]);
@@ -30,6 +31,7 @@ function ManagerDashboard() {
 
   return (
     <div>
+      <Navbar />
       <h1>Manager Dashboard</h1>
       <PendingTable
         requests={requests}

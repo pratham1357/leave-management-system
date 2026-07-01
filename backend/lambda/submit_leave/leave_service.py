@@ -42,9 +42,6 @@ def submit_leave(request):
     if days > balance["remaining_days"]:
         raise ValueError("Insufficient leave balance.")
 
-    if days > leave_config["max_consecutive_days"]:
-        raise ValueError("Maximum consecutive leave exceeded.")
-
     if leave_config["requires_document"]:
         if not request.get("document_url"):
             raise ValueError("Supporting document is required.")
