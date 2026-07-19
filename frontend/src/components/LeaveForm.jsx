@@ -1,143 +1,244 @@
 import { useState } from "react";
 import { submitLeave } from "../api/leaveApi";
 
+
 function LeaveForm({
   employeeId,
   onSuccess,
 }) {
-  const [formData, setFormData] = useState({
-    employeeId: employeeId,
-    leaveType: "CASUAL",
-    startDate: "",
-    endDate: "",
-    reason: "",
-  });
-
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
+  const [formData, setFormData] =
+    useState({
+      leaveType: "CASUAL",
+      startDate: "",
+      endDate: "",
+      reason: "",
     });
+
+  const [submitting, setSubmitting] =
+    useState(false);
+
+  const [message, setMessage] =
+    useState({
+      type: "",
+      text: "",
+    });
+
+
+  const handleChange = (event) => {
+    const {
+      name,
+      value,
+    } = event.target;
+
+    setFormData((current) => ({
+      ...current,
+      [name]: value,
+    }));
+
+    if (message.text) {
+      setMessage({
+        type: "",
+        text: "",
+      });
+    }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
 
     try {
-      await submitLeave(formData);
+      setSubmitting(true);
+
+      setMessage({
+        type: "",
+        text: "",
+      });
+
+
+      await submitLeave({
+        ...formData,
+        employeeId,
+      });
+
+
       if (onSuccess) {
         await onSuccess();
       }
-      
-      alert("Leave submitted successfully!");
+
 
       setFormData({
-        employeeId: employeeId,
         leaveType: "CASUAL",
         startDate: "",
         endDate: "",
         reason: "",
       });
-    } catch (err) {
-      console.error(err);
 
-      alert(
-        err.response?.data?.message ||
-          "Failed to submit leave."
+
+      setMessage({
+        type: "success",
+        text:
+          "Leave request submitted successfully.",
+      });
+
+    } catch (err) {
+      console.error(
+        "Failed to submit leave:",
+        err
       );
+
+      setMessage({
+        type: "error",
+        text:
+          err.response?.data?.message ||
+          "Failed to submit leave request.",
+      });
+
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const inputStyle = {
-    width: "100%",
-    padding: "12px",
-    marginBottom: "15px",
-    border: "1px solid #ddd",
-    borderRadius: "8px",
-    boxSizing: "border-box",
-  };
 
   return (
-      <form
-        onSubmit={handleSubmit}
-        style={{
-          background: "white",
-          padding: "25px",
-          borderRadius: "16px",
-          boxShadow:
-            "0 4px 12px rgba(0,0,0,0.1)",
-          maxWidth: "500px",
-          marginBottom: "30px",
-        }}
-      >
-        <h2 style={{ marginTop: 0 }}>
-          Apply Leave
-        </h2>
+    <form
+      onSubmit={handleSubmit}
+      className="leave-form"
+    >
+      {message.text && (
+        <div
+          className={
+            message.type === "success"
+              ? "alert alert-success"
+              : "alert alert-error"
+          }
+        >
+          {message.text}
+        </div>
+      )}
+
+
+      <div className="form-group">
+        <label
+          className="form-label"
+          htmlFor="leaveType"
+        >
+          Leave Type
+        </label>
 
         <select
+          id="leaveType"
           name="leaveType"
           value={formData.leaveType}
           onChange={handleChange}
-          style={inputStyle}
+          className="form-select"
         >
           <option value="CASUAL">
-            CASUAL
+            Casual Leave
           </option>
+
           <option value="SICK">
-            SICK
+            Sick Leave
           </option>
+
           <option value="EARNED">
-            EARNED
+            Earned Leave
           </option>
+
           <option value="UNPAID">
-            UNPAID
+            Unpaid Leave
           </option>
         </select>
+      </div>
 
-        <input
-          type="date"
-          name="startDate"
-          value={formData.startDate}
-          onChange={handleChange}
-          style={inputStyle}
-        />
 
-        <input
-          type="date"
-          name="endDate"
-          value={formData.endDate}
-          onChange={handleChange}
-          style={inputStyle}
-        />
+      <div className="leave-date-grid">
+
+        <div className="form-group">
+          <label
+            className="form-label"
+            htmlFor="startDate"
+          >
+            Start Date
+          </label>
+
+          <input
+            id="startDate"
+            type="date"
+            name="startDate"
+            value={formData.startDate}
+            onChange={handleChange}
+            className="form-input"
+            required
+          />
+        </div>
+
+
+        <div className="form-group">
+          <label
+            className="form-label"
+            htmlFor="endDate"
+          >
+            End Date
+          </label>
+
+          <input
+            id="endDate"
+            type="date"
+            name="endDate"
+            value={formData.endDate}
+            onChange={handleChange}
+            className="form-input"
+            required
+          />
+        </div>
+
+      </div>
+
+
+      <div className="form-group">
+        <label
+          className="form-label"
+          htmlFor="reason"
+        >
+          Reason
+        </label>
 
         <textarea
+          id="reason"
           name="reason"
-          placeholder="Reason"
+          placeholder="Briefly describe the reason for your leave..."
           value={formData.reason}
           onChange={handleChange}
-          rows="4"
-          style={{
-            ...inputStyle,
-            resize: "vertical",
-          }}
+          rows="5"
+          className="form-textarea"
+          required
         />
+      </div>
+
+
+      <div className="leave-form-footer">
+        <div className="leave-form-employee">
+          Applying as{" "}
+          <strong>
+            {employeeId}
+          </strong>
+        </div>
 
         <button
           type="submit"
-          style={{
-            background: "#2563eb",
-            color: "white",
-            border: "none",
-            padding: "12px 24px",
-            borderRadius: "8px",
-            cursor: "pointer",
-            fontWeight: "bold",
-          }}
+          className="btn btn-primary"
+          disabled={submitting}
         >
-          Submit Request
+          {submitting
+            ? "Submitting..."
+            : "Submit Request"}
         </button>
-      </form>
-    );
+      </div>
+
+    </form>
+  );
 }
+
 
 export default LeaveForm;

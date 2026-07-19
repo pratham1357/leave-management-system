@@ -1,19 +1,47 @@
-function LeaveBalanceCard({ title, value }) {
+function LeaveBalanceCard({
+  title,
+  value,
+  type,
+}) {
+  const initials = {
+    casual: "CL",
+    sick: "SL",
+    earned: "EL",
+    unpaid: "UL",
+  };
+
+
   return (
-    <div
-      style={{
-        background: "white",
-        padding: "20px",
-        borderRadius: "12px",
-        boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-        width: "180px",
-        textAlign: "center",
-      }}
-    >
-      <h3>{title}</h3>
-      <h2>{value}</h2>
+    <div className="leave-balance-card">
+
+      <div className="leave-balance-header">
+
+        <div
+          className={
+            `leave-balance-icon leave-balance-${type}`
+          }
+        >
+          {initials[type] || "LV"}
+        </div>
+
+        <span className="leave-balance-label">
+          {title}
+        </span>
+
+      </div>
+
+
+      <div className="leave-balance-value">
+        {value}
+      </div>
+
+      <div className="leave-balance-unit">
+        days available
+      </div>
+
     </div>
   );
 }
+
 
 export default LeaveBalanceCard;
