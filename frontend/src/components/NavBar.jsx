@@ -1,19 +1,128 @@
-import { Link } from "react-router-dom";
+import {
+  NavLink,
+  useNavigate,
+} from "react-router-dom";
+
+import { useAuth } from "../context/AuthContext";
 
 function Navbar() {
+  const {
+    user,
+    logout,
+  } = useAuth();
+
+  const navigate =
+    useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+
+      navigate(
+        "/login",
+        {
+          replace: true,
+        }
+      );
+    } catch (error) {
+      console.error(
+        "Logout failed:",
+        error
+      );
+    }
+  };
+
+  const canAccessManagement =
+    user?.role === "Manager" ||
+    user?.role === "HR";
+
+  const canAccessReports =
+    user?.role === "HR";
+
   return (
-    <div
-      style={{
-        padding: "15px",
-        display: "flex",
-        gap: "20px",
-        background: "#f0f0f0"
-      }}
+    <nav className="navbar">
+      <div className="navbar-left">
+        <div className="navbar-brand">
+          <div className="navbar-logo">
+            LF
+          </div>
+
+          <span>
+            LeaveFlow
+          </span>
+        </div>
+
+        <div className="navbar-links">
+          <NavigationLink
+            to="/"
+            label="Dashboard"
+          />
+
+          {canAccessManagement && (
+            <>
+              <NavigationLink
+                to="/approvals"
+                label="Approvals"
+              />
+
+              <NavigationLink
+                to="/calendar"
+                label="Team Calendar"
+              />
+            </>
+          )}
+
+          {canAccessReports && (
+            <NavigationLink
+              to="/reports"
+              label="Reports"
+            />
+          )}
+        </div>
+      </div>
+
+      <div className="navbar-right">
+        <div className="navbar-user">
+          <div className="navbar-user-email">
+            {user?.email ||
+              "Authenticated User"}
+          </div>
+
+          <div className="navbar-user-role">
+            {user?.role ||
+              "User"}
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="navbar-signout"
+        >
+          Sign Out
+        </button>
+      </div>
+    </nav>
+  );
+}
+
+function NavigationLink({
+  to,
+  label,
+}) {
+  return (
+    <NavLink
+      to={to}
+      className={({
+        isActive,
+      }) =>
+        isActive
+          ? "navbar-link navbar-link-active"
+          : "navbar-link"
+      }
     >
-      <Link to="/">Employee Dashboard</Link>
-      <Link to="/manager">Manager Dashboard</Link>
-      <Link to="/calendar">Calendar</Link>
-    </div>
+      {label}
+    </NavLink>
   );
 }
 

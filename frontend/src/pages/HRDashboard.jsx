@@ -3,7 +3,9 @@ import {
   useState,
 } from "react";
 
-import { Link } from "react-router-dom";
+import {
+  Link,
+} from "react-router-dom";
 
 import Navbar from "../components/Navbar";
 
@@ -16,13 +18,13 @@ import {
 } from "../api/calendarApi";
 
 
-function ManagerDashboard() {
+function HRDashboard() {
   const [stats, setStats] =
     useState({
       pendingApprovals: 0,
       currentlyOnLeave: 0,
       upcomingAbsences: 0,
-      approvedLeaves: 0,
+      approvedLeaveRecords: 0,
     });
 
   const [
@@ -87,10 +89,16 @@ function ManagerDashboard() {
         const upcoming =
           calendarData
             .filter(
-              (leave) =>
-                new Date(
-                  leave.startDate
-                ) > today
+              (leave) => {
+                const startDate =
+                  new Date(
+                    leave.startDate
+                  );
+
+                return (
+                  startDate > today
+                );
+              }
             )
             .sort(
               (a, b) =>
@@ -113,23 +121,26 @@ function ManagerDashboard() {
           upcomingAbsences:
             upcoming.length,
 
-          approvedLeaves:
+          approvedLeaveRecords:
             calendarData.length,
         });
 
 
         setUpcomingLeaves(
-          upcoming.slice(0, 5)
+          upcoming.slice(
+            0,
+            5
+          )
         );
 
       } catch (err) {
         console.error(
-          "Failed to load manager dashboard:",
+          "Failed to load HR dashboard:",
           err
         );
 
         setError(
-          "Unable to load dashboard statistics."
+          "Unable to load HR dashboard statistics."
         );
 
       } finally {
@@ -149,16 +160,43 @@ function ManagerDashboard() {
       <main className="page">
         <div className="page-container">
 
-          <header className="page-header">
-            <h1 className="page-title">
-              Manager Dashboard
-            </h1>
+          <header className="hr-dashboard-header">
 
-            <p className="page-description">
-              Monitor team availability,
-              upcoming absences, and leave
-              requests requiring your attention.
-            </p>
+            <div>
+              <div className="hr-dashboard-eyebrow">
+                WORKFORCE MANAGEMENT
+              </div>
+
+              <h1 className="page-title">
+                HR Dashboard
+              </h1>
+
+              <p className="page-description">
+                Monitor organization-wide leave
+                activity, employee availability,
+                and pending approval workload.
+              </p>
+            </div>
+
+
+            <div className="hr-header-actions">
+
+              <Link
+                to="/approvals"
+                className="btn btn-primary"
+              >
+                Review Approvals
+              </Link>
+
+              <Link
+                to="/calendar"
+                className="btn btn-secondary"
+              >
+                View Calendar
+              </Link>
+
+            </div>
+
           </header>
 
 
@@ -171,79 +209,106 @@ function ManagerDashboard() {
 
           {loading ? (
             <div className="dashboard-loading">
-              Loading dashboard...
+              Loading workforce overview...
             </div>
           ) : (
             <>
-              <div className="stats-grid">
 
-                <StatCard
-                  title="Pending Approvals"
-                  value={
-                    stats.pendingApprovals
-                  }
-                  code="PA"
-                  type="pending"
-                />
+              <section className="hr-overview-section">
 
-                <StatCard
-                  title="Currently on Leave"
-                  value={
-                    stats.currentlyOnLeave
-                  }
-                  code="OL"
-                  type="active"
-                />
+                <div className="section-heading">
+                  <div>
+                    <h2 className="section-title">
+                      Workforce Overview
+                    </h2>
 
-                <StatCard
-                  title="Upcoming Absences"
-                  value={
-                    stats.upcomingAbsences
-                  }
-                  code="UA"
-                  type="upcoming"
-                />
-
-                <StatCard
-                  title="Approved Leave Records"
-                  value={
-                    stats.approvedLeaves
-                  }
-                  code="AR"
-                  type="approved"
-                />
-
-              </div>
+                    <p className="section-description">
+                      Current organization-wide
+                      leave activity at a glance.
+                    </p>
+                  </div>
+                </div>
 
 
-              <div className="dashboard-grid">
+                <div className="stats-grid">
+
+                  <HRStatCard
+                    title="Pending Approvals"
+                    value={
+                      stats.pendingApprovals
+                    }
+                    code="PA"
+                    type="pending"
+                    description="Requests awaiting review"
+                  />
+
+                  <HRStatCard
+                    title="Currently on Leave"
+                    value={
+                      stats.currentlyOnLeave
+                    }
+                    code="OL"
+                    type="active"
+                    description="Employees absent today"
+                  />
+
+                  <HRStatCard
+                    title="Upcoming Absences"
+                    value={
+                      stats.upcomingAbsences
+                    }
+                    code="UA"
+                    type="upcoming"
+                    description="Scheduled future absences"
+                  />
+
+                  <HRStatCard
+                    title="Approved Records"
+                    value={
+                      stats.approvedLeaveRecords
+                    }
+                    code="AR"
+                    type="approved"
+                    description="Total approved leave records"
+                  />
+
+                </div>
+
+              </section>
+
+
+              <div className="hr-dashboard-grid">
 
                 <section className="dashboard-panel">
 
                   <div className="dashboard-panel-header">
+
                     <div>
                       <h2 className="dashboard-panel-title">
                         Upcoming Absences
                       </h2>
 
                       <p className="dashboard-panel-description">
-                        Next approved leave
-                        periods across your team.
+                        Employees with approved
+                        leave scheduled next.
                       </p>
                     </div>
+
 
                     <Link
                       to="/calendar"
                       className="dashboard-text-link"
                     >
-                      View Calendar
+                      View all
                     </Link>
+
                   </div>
 
 
                   {upcomingLeaves.length ===
                   0 ? (
                     <div className="dashboard-empty-state">
+
                       <div className="dashboard-empty-icon">
                         ✓
                       </div>
@@ -253,13 +318,14 @@ function ManagerDashboard() {
                       </div>
 
                       <div className="empty-state-description">
-                        Your team currently has
-                        no upcoming approved
-                        leave.
+                        There are currently no
+                        approved future absences.
                       </div>
+
                     </div>
                   ) : (
                     <div className="absence-list">
+
                       {upcomingLeaves.map(
                         (
                           leave,
@@ -271,13 +337,16 @@ function ManagerDashboard() {
                             }
                             className="absence-list-item"
                           >
+
                             <div className="employee-avatar">
                               {getEmployeeInitials(
                                 leave.employeeId
                               )}
                             </div>
 
+
                             <div className="absence-details">
+
                               <div className="absence-employee">
                                 {
                                   leave.employeeId
@@ -285,6 +354,7 @@ function ManagerDashboard() {
                               </div>
 
                               <div className="absence-meta">
+
                                 <span>
                                   {formatLeaveType(
                                     leave.leaveType
@@ -304,11 +374,15 @@ function ManagerDashboard() {
                                     leave.endDate
                                   }
                                 </span>
+
                               </div>
+
                             </div>
+
                           </div>
                         )
                       )}
+
                     </div>
                   )}
 
@@ -318,16 +392,138 @@ function ManagerDashboard() {
                 <section className="dashboard-panel">
 
                   <div className="dashboard-panel-header">
+
                     <div>
                       <h2 className="dashboard-panel-title">
-                        Quick Actions
+                        Approval Workload
                       </h2>
 
                       <p className="dashboard-panel-description">
-                        Access your most common
-                        leave management tasks.
+                        Requests currently waiting
+                        for HR or management
+                        action.
                       </p>
                     </div>
+
+                  </div>
+
+
+                  <div className="hr-approval-summary">
+
+                    <div className="hr-approval-number">
+                      {
+                        stats.pendingApprovals
+                      }
+                    </div>
+
+                    <div className="hr-approval-label">
+                      pending leave{" "}
+                      {stats.pendingApprovals ===
+                      1
+                        ? "request"
+                        : "requests"}
+                    </div>
+
+
+                    {stats.pendingApprovals >
+                    0 ? (
+                      <p className="hr-approval-message">
+                        There are outstanding
+                        requests that require
+                        review.
+                      </p>
+                    ) : (
+                      <p className="hr-approval-message">
+                        All submitted leave
+                        requests have been
+                        processed.
+                      </p>
+                    )}
+
+
+                    <Link
+                      to="/approvals"
+                      className="btn btn-primary hr-approval-button"
+                    >
+                      {stats.pendingApprovals >
+                      0
+                        ? "Review Pending Requests"
+                        : "Open Approvals"}
+                    </Link>
+
+                  </div>
+
+                </section>
+
+
+                <section className="dashboard-panel">
+
+                  <div className="dashboard-panel-header">
+
+                    <div>
+                      <h2 className="dashboard-panel-title">
+                        Workforce Snapshot
+                      </h2>
+
+                      <p className="dashboard-panel-description">
+                        Summary of organization
+                        leave availability.
+                      </p>
+                    </div>
+
+                  </div>
+
+
+                  <div className="workforce-summary">
+
+                    <SummaryRow
+                      label="Employees currently absent"
+                      value={
+                        stats.currentlyOnLeave
+                      }
+                    />
+
+                    <SummaryRow
+                      label="Upcoming approved absences"
+                      value={
+                        stats.upcomingAbsences
+                      }
+                    />
+
+                    <SummaryRow
+                      label="Requests awaiting action"
+                      value={
+                        stats.pendingApprovals
+                      }
+                    />
+
+                    <SummaryRow
+                      label="Approved leave records"
+                      value={
+                        stats.approvedLeaveRecords
+                      }
+                    />
+
+                  </div>
+
+                </section>
+
+
+                <section className="dashboard-panel">
+
+                  <div className="dashboard-panel-header">
+
+                    <div>
+                      <h2 className="dashboard-panel-title">
+                        HR Quick Actions
+                      </h2>
+
+                      <p className="dashboard-panel-description">
+                        Access common workforce
+                        management tasks.
+                      </p>
+                    </div>
+
                   </div>
 
 
@@ -337,24 +533,26 @@ function ManagerDashboard() {
                       to="/approvals"
                       className="quick-action-card"
                     >
+
                       <div className="quick-action-icon quick-action-primary">
                         AP
                       </div>
 
                       <div>
                         <div className="quick-action-title">
-                          Review Approvals
+                          Leave Approvals
                         </div>
 
                         <div className="quick-action-description">
-                          Process pending employee
-                          leave requests.
+                          Review and process
+                          employee leave requests.
                         </div>
                       </div>
 
                       <span className="quick-action-arrow">
                         →
                       </span>
+
                     </Link>
 
 
@@ -362,24 +560,26 @@ function ManagerDashboard() {
                       to="/calendar"
                       className="quick-action-card"
                     >
+
                       <div className="quick-action-icon quick-action-secondary">
-                        TC
+                        AC
                       </div>
 
                       <div>
                         <div className="quick-action-title">
-                          Team Calendar
+                          Absence Calendar
                         </div>
 
                         <div className="quick-action-description">
-                          Review upcoming team
-                          availability.
+                          View approved absences
+                          across the organization.
                         </div>
                       </div>
 
                       <span className="quick-action-arrow">
                         →
                       </span>
+
                     </Link>
 
                   </div>
@@ -387,6 +587,7 @@ function ManagerDashboard() {
                 </section>
 
               </div>
+
             </>
           )}
 
@@ -397,16 +598,18 @@ function ManagerDashboard() {
 }
 
 
-function StatCard({
+function HRStatCard({
   title,
   value,
   code,
   type,
+  description,
 }) {
   return (
-    <div className="stat-card dashboard-stat-card">
+    <div className="stat-card hr-stat-card">
 
-      <div className="dashboard-stat-header">
+      <div className="hr-stat-top">
+
         <div
           className={
             `dashboard-stat-icon dashboard-stat-${type}`
@@ -414,15 +617,41 @@ function StatCard({
         >
           {code}
         </div>
+
+        <div className="hr-stat-value">
+          {value}
+        </div>
+
       </div>
 
-      <div className="stat-value">
-        {value}
-      </div>
 
-      <div className="stat-label">
+      <div className="hr-stat-title">
         {title}
       </div>
+
+      <div className="hr-stat-description">
+        {description}
+      </div>
+
+    </div>
+  );
+}
+
+
+function SummaryRow({
+  label,
+  value,
+}) {
+  return (
+    <div className="workforce-summary-row">
+
+      <span className="workforce-summary-label">
+        {label}
+      </span>
+
+      <span className="workforce-summary-value">
+        {value}
+      </span>
 
     </div>
   );
@@ -463,4 +692,4 @@ function getEmployeeInitials(
 }
 
 
-export default ManagerDashboard;
+export default HRDashboard;
