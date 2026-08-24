@@ -1,0 +1,79 @@
+# Artillery load test — LMS
+#
+# NOT EXECUTED. Review with the team before running — see notes below.
+#
+# IMPORTANT DISCREPANCY FOUND: docs/api-specs.md documents "POST
+# /leave/apply", but the actual frontend code (src/api/leaveApi.js) calls
+# "POST /leave/request". This config uses the CODE-VERIFIED path, not the
+# doc, since the doc may be stale. Confirm with the team which is correct
+# before relying on either for anything beyond this load test.
+#
+# ALSO NOTE: no Authorization header is sent by any LMS frontend API call
+# (grepped the whole frontend/src — zero Authorization/interceptor usage).
+# Either this endpoint is unauthenticated at the API Gateway level, or
+# there's a gap between the Cognito login flow and the actual API calls.
+# This config sends no auth header, matching what the real frontend does —
+# confirm in API Gateway console whether a Cognito authorizer is actually
+# attached to this route; if it is, requests will 401 and this test will
+# only validate the authorizer, not real submit_leave capacity.
+#
+# Two scenarios below:
+#   1. PRIMARY / SAFE: GET /leave/balance/{employee_id} — read-only,
+#      idempotent, no side effects. Prefer this for the 50-concurrent/60s
+#      capacity test.
+#   2. OPT-IN / DESTRUCTIVE: POST /leave/request — writes real rows into
+#      lms-leave-requests and mutates lms-leave-balances. The URL's "/dev"
+#      stage suggests non-prod, but the DynamoDB table names have no
+#      dev/prod suffix, so we cannot assume the data is disposable. Only
+#      run this against a dedicated test employee_id, after confirming with
+#      whoever owns this AWS account, and expect most requests after the
+#      first to fail with "overlaps with an existing approved leave" unless
+#      dates/employee_id are varied per request (this config does vary
+#      employee_id via a CSV to reduce that effect — see payload.csv below).
+#
+# Exact commands to run (DO NOT RUN without explicit approval):
+#   Scenario 1 (safe, recommended default):
+#     npx artillery run docs/ops/load-test.yml --target https://lid57kwx8g.execute-api.ap-south-1.amazonaws.com/dev
+#   Scenario 2 (destructive, opt-in — uncomment the scenario below first):
+#     same command, after creating payload.csv with real test employee_ids
+#     that exist in lms-leave-balances and lms-leave-config.
+
+config:
+  target: "https://lid57kwx8g.execute-api.ap-south-1.amazonaws.com/dev"
+  phases:
+    - duration: 60
+      arrivalRate: 50
+      name: "50 concurrent arrivals over 60s"
+
+scenarios:
+  - name: "Get leave balance (read-only, safe)"
+    flow:
+      - get:
+          url: "/leave/balance/EMP001"
+          expect:
+            - statusCode: 200
+
+  # OPT-IN — destructive, requires explicit approval and a dedicated test
+  # employee_id with a real lms-leave-balances/lms-leave-config record.
+  # Uncomment only after that setup exists and the team has signed off.
+  #
+  # - name: "Submit leave (writes real data)"
+  #   flow:
+  #     - post:
+  #         url: "/leave/request"
+  #         json:
+  #           employee_id: "TEST-LOADTEST-001"
+  #           leave_type: "CASUAL"
+  #           start_date: "2027-01-01"
+  #           end_date: "2027-01-01"
+  #           reason: "Load test — safe to reject/ignore"
+  #         expect:
+  #           - statusCode: 201
+
+# Expected report output to capture (Artillery prints this automatically):
+#   - http.request_rate (requests/sec)
+#   - http.codes.200/201 vs 4xx/5xx (error rate)
+#   - http.response_time.p50 / p95 / p99
+# DynamoDB capacity signal: since these tables use on-demand mode
+# (assumed — confirm in console), watch for 5xx + ThrottledRequests metric
+# correlation during the run rather than expecting a hard capacity ceiling.
