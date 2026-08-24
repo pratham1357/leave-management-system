@@ -1,5 +1,8 @@
 # Leave Management System (Serverless AWS)
 
+[![Frontend CI/CD](https://github.com/pratham1357/leave-management-system/actions/workflows/frontend-ci-cd.yml/badge.svg)](https://github.com/pratham1357/leave-management-system/actions/workflows/frontend-ci-cd.yml)
+[![Backend CI/CD](https://github.com/pratham1357/leave-management-system/actions/workflows/backend-ci-cd.yml/badge.svg)](https://github.com/pratham1357/leave-management-system/actions/workflows/backend-ci-cd.yml)
+
 A cloud-native **Leave Management System** built using AWS serverless services that enables employees to apply for leave, managers to review requests, and organizations to manage leave balances efficiently. The application follows a scalable, event-driven architecture and demonstrates backend engineering principles using AWS.
 
 ---

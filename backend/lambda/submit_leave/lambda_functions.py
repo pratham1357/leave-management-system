@@ -1,6 +1,7 @@
 """
 AWS Lambda entry point for Leave Management System.
 """
+# CI/CD verification
 import json
 from leave_service import submit_leave
 

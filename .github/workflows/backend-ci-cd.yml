@@ -1,0 +1,83 @@
+name: Backend CI/CD (submit_leave Lambda)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/lambda/submit_leave/**'
+      - '.github/workflows/backend-ci-cd.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'backend/lambda/submit_leave/**'
+
+defaults:
+  run:
+    working-directory: backend/lambda/submit_leave
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      # requirements.txt is intentionally near-empty — boto3 ships with the
+      # Lambda runtime — so "build" here means packaging the function, not
+      # installing heavy dependencies.
+      - name: Package Lambda zip
+        run: |
+          mkdir -p ../../../dist
+          zip -r ../../../dist/submit_leave.zip . -x "tests/*" -x "requirements-dev.txt" -x "__pycache__/*"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: submit_leave-zip
+          path: dist/submit_leave.zip
+          retention-days: 3
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements-dev.txt
+      - run: python -m pytest tests/ -v
+
+  deploy:
+    name: Deploy (AWS Lambda)
+    runs-on: ubuntu-latest
+    needs: [build, test]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: submit_leave-zip
+          path: dist/
+      # Requires repo secrets: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+      # (or an OIDC role — preferred — see note below), and a repo variable
+      # LAMBDA_FUNCTION_NAME set to the ACTUAL deployed function name.
+      # That name is not guessed here — this repo has no IaC checked in
+      # (infrastructure/iam and infrastructure/dynamodb are empty folders),
+      # so the real function name must come from you via the AWS Console.
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-south-1
+      - name: Deploy to Lambda
+        # download-artifact's `path` resolves relative to the repo root
+        # (defaults.run.working-directory only affects `run:` steps), so the
+        # zip lands at <repo-root>/dist/submit_leave.zip — use github.workspace
+        # here rather than a path relative to this job's working-directory.
+        run: |
+          aws lambda update-function-code \
+            --function-name "${{ vars.LAMBDA_FUNCTION_NAME }}" \
+            --zip-file "fileb://${{ github.workspace }}/dist/submit_leave.zip" \
+            --region ap-south-1
