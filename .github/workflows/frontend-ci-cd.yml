@@ -54,6 +54,16 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build, test]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # Overrides the workflow-level `working-directory: frontend` default.
+    # The linked Vercel project's own Root Directory setting is already
+    # "frontend" (pulled in via `vercel pull` below), and the Vercel CLI
+    # resolves that setting relative to cwd. Running these steps from
+    # frontend/ too would resolve it a second time (frontend/frontend,
+    # which doesn't exist) - so these steps run from the repo root and
+    # let Vercel's own project config be the single source of truth.
+    defaults:
+      run:
+        working-directory: .
     env:
       # Required so `vercel pull` can link to the existing Vercel project
       # non-interactively — there is no .vercel/project.json checked into
