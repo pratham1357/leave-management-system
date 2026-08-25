@@ -9,7 +9,7 @@ import LeaveForm from "../components/LeaveForm";
 import LeaveTable from "../components/LeaveTable";
 import Navbar from "../components/Navbar";
 
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 
 import {
   getLeaveBalance,
@@ -40,135 +40,146 @@ function EmployeeDashboard() {
   const employeeId =
     user?.employeeId;
 
+  const missingEmployeeIdError = employeeId
+    ? ""
+    : "No employee ID is associated with this account.";
+
+  const displayError = missingEmployeeIdError || error;
+
+  const isLoading = employeeId ? loading : false;
+
 
   const loadData = useCallback(
-    async () => {
+    () => {
       if (!employeeId) {
-        setError(
-          "No employee ID is associated with this account."
-        );
-
-        setLoading(false);
-        return;
+        return undefined;
       }
 
-      try {
-        setLoading(true);
-        setError("");
+      /*
+        The initial setLoading/setError reset is deferred inside
+        the first .then() (rather than run directly in this
+        function's synchronous body) so that no state setter is
+        ever invoked synchronously while this effect is running -
+        that would otherwise trigger cascading renders.
+      */
+      return Promise.resolve()
+        .then(() => {
+          setLoading(true);
+          setError("");
 
-        const [
+          return Promise.all([
+            getLeaveBalance(
+              employeeId
+            ),
+            getLeaveHistory(
+              employeeId
+            ),
+          ]);
+        })
+        .then(([
           balanceData,
           historyData,
-        ] = await Promise.all([
-          getLeaveBalance(
-            employeeId
-          ),
-          getLeaveHistory(
-            employeeId
-          ),
-        ]);
+        ]) => {
+          const mappedBalances = {
+            casual: 0,
+            sick: 0,
+            earned: 0,
+            unpaid: 0,
+          };
 
 
-        const mappedBalances = {
-          casual: 0,
-          sick: 0,
-          earned: 0,
-          unpaid: 0,
-        };
+          balanceData.forEach(
+            (balance) => {
+              if (
+                balance.balance_key ===
+                "CASUAL"
+              ) {
+                mappedBalances.casual =
+                  balance.remaining_days;
+              }
 
+              if (
+                balance.balance_key ===
+                "SICK"
+              ) {
+                mappedBalances.sick =
+                  balance.remaining_days;
+              }
 
-        balanceData.forEach(
-          (balance) => {
-            if (
-              balance.balance_key ===
-              "CASUAL"
-            ) {
-              mappedBalances.casual =
-                balance.remaining_days;
+              if (
+                balance.balance_key ===
+                "EARNED"
+              ) {
+                mappedBalances.earned =
+                  balance.remaining_days;
+              }
+
+              if (
+                balance.balance_key ===
+                "UNPAID"
+              ) {
+                mappedBalances.unpaid =
+                  balance.remaining_days;
+              }
             }
-
-            if (
-              balance.balance_key ===
-              "SICK"
-            ) {
-              mappedBalances.sick =
-                balance.remaining_days;
-            }
-
-            if (
-              balance.balance_key ===
-              "EARNED"
-            ) {
-              mappedBalances.earned =
-                balance.remaining_days;
-            }
-
-            if (
-              balance.balance_key ===
-              "UNPAID"
-            ) {
-              mappedBalances.unpaid =
-                balance.remaining_days;
-            }
-          }
-        );
-
-
-        setBalances(
-          mappedBalances
-        );
-
-
-        const formattedRequests =
-          historyData.map(
-            (request) => ({
-              requestId:
-                request.request_id,
-
-              leaveType:
-                request.leave_type,
-
-              status:
-                request.status,
-
-              startDate:
-                request.start_date,
-
-              endDate:
-                request.end_date,
-
-              reason:
-                request.reason,
-            })
           );
 
 
-        setRequests(
-          formattedRequests
-        );
+          setBalances(
+            mappedBalances
+          );
 
-      } catch (err) {
-        console.error(
-          "Failed to load employee data:",
-          err
-        );
 
-        setError(
-          "Unable to load your leave information."
-        );
+          const formattedRequests =
+            historyData.map(
+              (request) => ({
+                requestId:
+                  request.request_id,
 
-        setBalances({
-          casual: 0,
-          sick: 0,
-          earned: 0,
-          unpaid: 0,
+                leaveType:
+                  request.leave_type,
+
+                status:
+                  request.status,
+
+                startDate:
+                  request.start_date,
+
+                endDate:
+                  request.end_date,
+
+                reason:
+                  request.reason,
+              })
+            );
+
+
+          setRequests(
+            formattedRequests
+          );
+        })
+        .catch((err) => {
+          console.error(
+            "Failed to load employee data:",
+            err
+          );
+
+          setError(
+            "Unable to load your leave information."
+          );
+
+          setBalances({
+            casual: 0,
+            sick: 0,
+            earned: 0,
+            unpaid: 0,
+          });
+
+          setRequests([]);
+        })
+        .finally(() => {
+          setLoading(false);
         });
-
-        setRequests([]);
-
-      } finally {
-        setLoading(false);
-      }
     },
     [employeeId]
   );
@@ -212,14 +223,14 @@ function EmployeeDashboard() {
           </header>
 
 
-          {error && (
+          {displayError && (
             <div className="alert alert-error">
-              {error}
+              {displayError}
             </div>
           )}
 
 
-          {loading ? (
+          {isLoading ? (
             <div className="dashboard-loading">
               Loading your leave
               information...

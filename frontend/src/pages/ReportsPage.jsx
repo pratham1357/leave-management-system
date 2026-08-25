@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import { getReports } from "../api/reportsApi";
 
@@ -12,32 +12,42 @@ function ReportsPage() {
   const [error, setError] =
     useState("");
 
-  useEffect(() => {
-    loadReports();
+  const loadReports = useCallback(() => {
+    /*
+      The initial setLoading/setError reset is deferred inside
+      the first .then() (rather than run directly in this
+      function's synchronous body) so that no state setter is
+      ever invoked synchronously while this effect is running -
+      that would otherwise trigger cascading renders.
+    */
+    return Promise.resolve()
+      .then(() => {
+        setLoading(true);
+        setError("");
+
+        return getReports();
+      })
+      .then((data) => {
+        setReports(data);
+      })
+      .catch((err) => {
+        console.error(
+          "Failed to load reports:",
+          err
+        );
+
+        setError(
+          "Unable to load reports and analytics."
+        );
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, []);
 
-  const loadReports = async () => {
-    try {
-      setLoading(true);
-      setError("");
-
-      const data =
-        await getReports();
-
-      setReports(data);
-    } catch (err) {
-      console.error(
-        "Failed to load reports:",
-        err
-      );
-
-      setError(
-        "Unable to load reports and analytics."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    loadReports();
+  }, [loadReports]);
 
   const exportCSV = () => {
     if (
