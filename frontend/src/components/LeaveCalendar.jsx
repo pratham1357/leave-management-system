@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Calendar,
   dateFnsLocalizer,
@@ -29,6 +29,42 @@ const localizer = dateFnsLocalizer({
   locales
 });
 
+function formatLeaveType(leaveType) {
+  if (!leaveType) {
+    return "Leave";
+  }
+
+  return leaveType
+    .toLowerCase()
+    .split("_")
+    .map(
+      (word) =>
+        word.charAt(0).toUpperCase() +
+        word.slice(1)
+    )
+    .join(" ");
+}
+
+function parseDate(dateValue) {
+  if (!dateValue) {
+    return null;
+  }
+
+  /*
+    Prevents date-only values such as "2026-07-21"
+    from being interpreted as UTC and shifting dates
+    depending on the browser timezone.
+  */
+  if (
+    typeof dateValue === "string" &&
+    /^\d{4}-\d{2}-\d{2}$/.test(dateValue)
+  ) {
+    return new Date(`${dateValue}T00:00:00`);
+  }
+
+  return new Date(dateValue);
+}
+
 function LeaveCalendar() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -43,130 +79,105 @@ function LeaveCalendar() {
     Views.MONTH
   );
 
-  useEffect(() => {
-    loadCalendar();
+  const loadCalendar = useCallback(() => {
+    /*
+      The initial setLoading/setError reset is deferred inside
+      the first .then() (rather than run directly in this
+      function's synchronous body) so that no state setter is
+      ever invoked synchronously while this effect is running -
+      that would otherwise trigger cascading renders.
+    */
+    return Promise.resolve()
+      .then(() => {
+        setLoading(true);
+        setError("");
+
+        return getCalendarData();
+      })
+      .then((data) => {
+        const calendarData = Array.isArray(data)
+          ? data
+          : data?.items || data?.events || [];
+
+        const formatted = calendarData
+          .map((item) => {
+            const employeeId =
+              item.employeeId ||
+              item.employee_id ||
+              "Employee";
+
+            const leaveType =
+              item.leaveType ||
+              item.leave_type ||
+              "LEAVE";
+
+            const startDate =
+              item.startDate ||
+              item.start_date;
+
+            const endDate =
+              item.endDate ||
+              item.end_date;
+
+            const start = parseDate(startDate);
+            const parsedEnd = parseDate(endDate);
+
+            if (
+              !start ||
+              !parsedEnd ||
+              Number.isNaN(start.getTime()) ||
+              Number.isNaN(parsedEnd.getTime())
+            ) {
+              console.warn(
+                "Skipping calendar event with invalid dates:",
+                item
+              );
+
+              return null;
+            }
+
+            return {
+              title: `${employeeId} · ${formatLeaveType(
+                leaveType
+              )}`,
+              start,
+
+              /*
+                react-big-calendar treats the end date of
+                an all-day event as exclusive.
+
+                Adding one day ensures the final approved
+                leave date is displayed on the calendar.
+              */
+              end: addDays(parsedEnd, 1),
+
+              allDay: true,
+              employeeId,
+              leaveType
+            };
+          })
+          .filter(Boolean);
+
+        setEvents(formatted);
+      })
+      .catch((err) => {
+        console.error(
+          "Failed to load calendar data:",
+          err
+        );
+
+        setError(
+          "Unable to load the team absence calendar."
+        );
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, []);
 
-  const formatLeaveType = (leaveType) => {
-    if (!leaveType) {
-      return "Leave";
-    }
-
-    return leaveType
-      .toLowerCase()
-      .split("_")
-      .map(
-        (word) =>
-          word.charAt(0).toUpperCase() +
-          word.slice(1)
-      )
-      .join(" ");
-  };
-
-  const parseDate = (dateValue) => {
-    if (!dateValue) {
-      return null;
-    }
-
-    /*
-      Prevents date-only values such as "2026-07-21"
-      from being interpreted as UTC and shifting dates
-      depending on the browser timezone.
-    */
-    if (
-      typeof dateValue === "string" &&
-      /^\d{4}-\d{2}-\d{2}$/.test(dateValue)
-    ) {
-      return new Date(`${dateValue}T00:00:00`);
-    }
-
-    return new Date(dateValue);
-  };
-
-  const loadCalendar = async () => {
-    try {
-      setLoading(true);
-      setError("");
-
-      const data = await getCalendarData();
-
-      const calendarData = Array.isArray(data)
-        ? data
-        : data?.items || data?.events || [];
-
-      const formatted = calendarData
-        .map((item) => {
-          const employeeId =
-            item.employeeId ||
-            item.employee_id ||
-            "Employee";
-
-          const leaveType =
-            item.leaveType ||
-            item.leave_type ||
-            "LEAVE";
-
-          const startDate =
-            item.startDate ||
-            item.start_date;
-
-          const endDate =
-            item.endDate ||
-            item.end_date;
-
-          const start = parseDate(startDate);
-          const parsedEnd = parseDate(endDate);
-
-          if (
-            !start ||
-            !parsedEnd ||
-            Number.isNaN(start.getTime()) ||
-            Number.isNaN(parsedEnd.getTime())
-          ) {
-            console.warn(
-              "Skipping calendar event with invalid dates:",
-              item
-            );
-
-            return null;
-          }
-
-          return {
-            title: `${employeeId} · ${formatLeaveType(
-              leaveType
-            )}`,
-            start,
-
-            /*
-              react-big-calendar treats the end date of
-              an all-day event as exclusive.
-
-              Adding one day ensures the final approved
-              leave date is displayed on the calendar.
-            */
-            end: addDays(parsedEnd, 1),
-
-            allDay: true,
-            employeeId,
-            leaveType
-          };
-        })
-        .filter(Boolean);
-
-      setEvents(formatted);
-    } catch (err) {
-      console.error(
-        "Failed to load calendar data:",
-        err
-      );
-
-      setError(
-        "Unable to load the team absence calendar."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    loadCalendar();
+  }, [loadCalendar]);
 
   const handleNavigate = (newDate) => {
     setCurrentDate(newDate);

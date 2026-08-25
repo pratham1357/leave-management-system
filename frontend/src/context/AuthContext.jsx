@@ -1,6 +1,4 @@
 import {
-  createContext,
-  useContext,
   useEffect,
   useState,
 } from "react";
@@ -12,8 +10,7 @@ import {
   getAuthenticatedUser,
 } from "../services/authService";
 
-
-const AuthContext = createContext(null);
+import { AuthContext } from "./auth-context.js";
 
 
 export function AuthProvider({
@@ -31,24 +28,33 @@ export function AuthProvider({
   ] = useState(false);
 
 
-  const loadUser = async () => {
-    try {
-      const authenticatedUser =
-        await getAuthenticatedUser();
+  /*
+    setUser/setLoading are called from inside the .then()/
+    .catch()/.finally() callbacks (rather than directly in this
+    function's synchronous body) so that no state setter is ever
+    invoked synchronously while the mount effect below is
+    running - that would otherwise trigger cascading renders.
+    The chain is returned so callers that `await loadUser()`
+    (handleLogin, handleNewPassword) still wait for it to finish.
+  */
+  const loadUser = () => {
+    return getAuthenticatedUser()
+      .then((authenticatedUser) => {
+        setUser(
+          authenticatedUser
+        );
+      })
+      .catch((error) => {
+        console.error(
+          "Failed to load user:",
+          error
+        );
 
-      setUser(
-        authenticatedUser
-      );
-    } catch (error) {
-      console.error(
-        "Failed to load user:",
-        error
-      );
-
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
+        setUser(null);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   };
 
 
@@ -151,18 +157,4 @@ export function AuthProvider({
       {children}
     </AuthContext.Provider>
   );
-}
-
-
-export function useAuth() {
-  const context =
-    useContext(AuthContext);
-
-  if (!context) {
-    throw new Error(
-      "useAuth must be used inside AuthProvider."
-    );
-  }
-
-  return context;
 }
